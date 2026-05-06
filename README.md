@@ -63,6 +63,22 @@ Open the URL shown in terminal (usually `http://localhost:5209`).
 dotnet test inpost_task.sln
 ```
 
+## Deploy (Render, auto deploy from GitHub)
+
+This repository includes:
+
+- `Dockerfile` for containerized ASP.NET Core deployment,
+- `render.yaml` blueprint for Render web service configuration.
+
+### One-time setup on Render
+
+1. Open [Render Dashboard](https://dashboard.render.com/) and choose **New +** -> **Blueprint**.
+2. Connect your GitHub account/repository.
+3. Select this repository and confirm blueprint creation.
+4. Render will detect `render.yaml`, create the web service, and deploy from branch `main`.
+
+After that, every push to `main` triggers auto deploy.
+
 ## Ranking logic (current)
 
 The score is designed to be transparent and practical:
@@ -109,5 +125,6 @@ Results are sorted by:
 - [x] Build and run instructions included
 - [x] Test command included
 - [x] Explainable technical decisions and scoring rationale in README
+- [x] Deployment config included (`Dockerfile` + `render.yaml`)
 - [ ] Screenshots / short recording added before final submission
 - [ ] Final repository link submitted through the form

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: inpost-smart-finder
+    env: docker
+    plan: free
+    branch: main
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
