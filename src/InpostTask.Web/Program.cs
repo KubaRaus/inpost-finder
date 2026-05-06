@@ -2,6 +2,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<InpostTask.Web.Services.InpostApiClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api-global-points.easypack24.net/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddScoped<InpostTask.Web.Services.PointSearchService>();
 
 var app = builder.Build();
 
@@ -22,7 +29,7 @@ app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Points}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 

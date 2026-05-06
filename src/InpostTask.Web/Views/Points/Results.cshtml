@@ -1,0 +1,68 @@
+@model InpostTask.Web.Models.PointSearchResultViewModel
+
+@{
+    ViewData["Title"] = "Search results";
+}
+
+<h1 class="mb-3">Search Results</h1>
+
+<p class="text-muted">
+    Loaded <strong>@Model.TotalFetchedPoints</strong> points from API cache/source.
+    Showing top <strong>@Model.Points.Count</strong> matches.
+</p>
+
+<p>
+    <a asp-action="Index" asp-controller="Points" class="btn btn-outline-secondary">New search</a>
+</p>
+
+@if (Model.Points.Count == 0)
+{
+    <div class="alert alert-warning">No points matched your criteria.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Score</th>
+                    <th>Name</th>
+                    <th>City</th>
+                    <th>Address</th>
+                    <th>Country</th>
+                    <th>Features</th>
+                    <th>Coordinates</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var ranked in Model.Points)
+            {
+                <tr>
+                    <td>
+                        <strong>@ranked.Score</strong>
+                        @if (ranked.ScoreBreakdown.Count > 0)
+                        {
+                            <div class="small text-muted">@string.Join("; ", ranked.ScoreBreakdown)</div>
+                        }
+                    </td>
+                    <td>@ranked.Point.Name</td>
+                    <td>@(ranked.Point.City ?? "-")</td>
+                    <td>@(ranked.Point.AddressLine1 ?? "-")</td>
+                    <td>@(ranked.Point.CountryCode ?? "-")</td>
+                    <td>@string.Join(", ", ranked.Point.Functions)</td>
+                    <td>
+                        @if (ranked.Point.Latitude is not null && ranked.Point.Longitude is not null)
+                        {
+                            @($"{ranked.Point.Latitude:0.00000}, {ranked.Point.Longitude:0.00000}")
+                        }
+                        else
+                        {
+                            @("-")
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

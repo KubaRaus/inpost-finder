@@ -1,0 +1,49 @@
+@model InpostTask.Web.Models.PointSearchRequest
+
+@{
+    ViewData["Title"] = "InPost Smart Finder";
+}
+
+<h1 class="mb-3">InPost Smart Finder</h1>
+<p class="text-muted">
+    Search InPost points using live API data and rank results by your preferences.
+</p>
+
+<form asp-action="Search" asp-controller="Points" method="post" class="row g-3">
+    <div class="col-md-3">
+        <label asp-for="CountryCode" class="form-label"></label>
+        <input asp-for="CountryCode" class="form-control" />
+        <span asp-validation-for="CountryCode" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="City" class="form-label"></label>
+        <input asp-for="City" class="form-control" />
+        <span asp-validation-for="City" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-5">
+        <label asp-for="RequiredFunctionsCsv" class="form-label"></label>
+        <input asp-for="RequiredFunctionsCsv" class="form-control" placeholder="e.g. parcel_send, parcel_collect" />
+        <span asp-validation-for="RequiredFunctionsCsv" class="text-danger"></span>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <input asp-for="Require247" class="form-check-input" />
+            <label asp-for="Require247" class="form-check-label"></label>
+        </div>
+        <div class="form-check">
+            <input asp-for="RequirePayment" class="form-check-input" />
+            <label asp-for="RequirePayment" class="form-check-label"></label>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Find points</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
