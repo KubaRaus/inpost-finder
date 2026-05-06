@@ -79,6 +79,12 @@ This repository includes:
 
 After that, every push to `main` triggers auto deploy.
 
+## Live demo
+
+The app is deployed and publicly available at:
+
+- [https://inpost-smart-finder.onrender.com](https://inpost-smart-finder.onrender.com)
+
 ## Ranking logic (current)
 
 The score is designed to be transparent and practical:
@@ -126,5 +132,6 @@ Results are sorted by:
 - [x] Test command included
 - [x] Explainable technical decisions and scoring rationale in README
 - [x] Deployment config included (`Dockerfile` + `render.yaml`)
-- [ ] Screenshots / short recording added before final submission
+- [x] Public live demo available (deployment link in README)
+- [ ] Screenshots / short recording (optional when live deployment is available)
 - [ ] Final repository link submitted through the form
