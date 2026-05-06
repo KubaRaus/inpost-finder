@@ -71,7 +71,7 @@ public class PointSearchServiceTests
 
     private sealed class FakeApiClient(IReadOnlyList<InpostPointDto> points) : IInpostApiClient
     {
-        public Task<IReadOnlyList<InpostPointDto>> GetAllPointsAsync(CancellationToken cancellationToken)
+        public Task<IReadOnlyList<InpostPointDto>> GetPointsAsync(PointSearchRequest request, CancellationToken cancellationToken)
         {
             return Task.FromResult(points);
         }

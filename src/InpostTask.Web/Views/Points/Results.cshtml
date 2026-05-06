@@ -2,6 +2,12 @@
 
 @{
     ViewData["Title"] = "Search results";
+    var request = Model.Request;
+    var hasAnyFilter = !string.IsNullOrWhiteSpace(request.CountryCode)
+                       || !string.IsNullOrWhiteSpace(request.City)
+                       || !string.IsNullOrWhiteSpace(request.RequiredFunctionsCsv)
+                       || request.Require247
+                       || request.RequirePayment;
 }
 
 <h1 class="mb-3">Search Results</h1>
@@ -10,6 +16,33 @@
     Loaded <strong>@Model.TotalFetchedPoints</strong> points from API cache/source.
     Showing top <strong>@Model.Points.Count</strong> matches.
 </p>
+
+@if (hasAnyFilter)
+{
+    <div class="mb-3">
+        <span class="text-muted me-2">Active filters:</span>
+        @if (!string.IsNullOrWhiteSpace(request.CountryCode))
+        {
+            <span class="badge text-bg-light border me-1">Country: @request.CountryCode</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(request.City))
+        {
+            <span class="badge text-bg-light border me-1">City: @request.City</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(request.RequiredFunctionsCsv))
+        {
+            <span class="badge text-bg-light border me-1">Functions: @request.RequiredFunctionsCsv</span>
+        }
+        @if (request.Require247)
+        {
+            <span class="badge text-bg-light border me-1">24/7 only</span>
+        }
+        @if (request.RequirePayment)
+        {
+            <span class="badge text-bg-light border me-1">Payment required</span>
+        }
+    </div>
+}
 
 <p>
     <a asp-action="Index" asp-controller="Points" class="btn btn-outline-secondary">New search</a>
@@ -49,7 +82,28 @@ else
                     <td>@(ranked.Point.City ?? "-")</td>
                     <td>@(ranked.Point.AddressLine1 ?? "-")</td>
                     <td>@(ranked.Point.CountryCode ?? "-")</td>
-                    <td>@string.Join(", ", ranked.Point.Functions)</td>
+                    <td>
+                        @{
+                            var previewFunctions = ranked.Point.Functions.Take(4).ToArray();
+                            var extraCount = ranked.Point.Functions.Count - previewFunctions.Length;
+                        }
+                        @if (previewFunctions.Length == 0)
+                        {
+                            <span>-</span>
+                        }
+                        else
+                        {
+                            <span>@string.Join(", ", previewFunctions)</span>
+                            @if (extraCount > 0)
+                            {
+                                <span class="text-muted">... (+@extraCount more)</span>
+                                <details class="mt-1">
+                                    <summary class="small">Show all features</summary>
+                                    <div class="small text-muted">@string.Join(", ", ranked.Point.Functions)</div>
+                                </details>
+                            }
+                        }
+                    </td>
                     <td>
                         @if (ranked.Point.Latitude is not null && ranked.Point.Longitude is not null)
                         {

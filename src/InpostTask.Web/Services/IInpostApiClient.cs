@@ -4,5 +4,5 @@ namespace InpostTask.Web.Services;
 
 public interface IInpostApiClient
 {
-    Task<IReadOnlyList<InpostPointDto>> GetAllPointsAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<InpostPointDto>> GetPointsAsync(PointSearchRequest request, CancellationToken cancellationToken);
 }

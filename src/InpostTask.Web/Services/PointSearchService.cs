@@ -10,7 +10,7 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
         var normalizedCity = request.City?.Trim();
         var requiredFunctions = ParseFunctions(request.RequiredFunctionsCsv);
 
-        var all = await apiClient.GetAllPointsAsync(cancellationToken);
+        var all = await apiClient.GetPointsAsync(request, cancellationToken);
 
         var filtered = all.Where(point =>
                 MatchesCountry(point, normalizedCountry)
@@ -31,7 +31,7 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
             .OrderByDescending(x => x.Score)
             .ThenBy(x => x.Point.City)
             .ThenBy(x => x.Point.Name)
-            .Take(100)
+            .Take(20)
             .ToArray();
 
         return new PointSearchResultViewModel

@@ -10,43 +10,69 @@ public sealed class InpostApiClient(
     IMemoryCache cache,
     ILogger<InpostApiClient> logger) : IInpostApiClient
 {
-    private const string CacheKey = "inpost-api-all-points";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
-    private const int MaxPages = 200;
-    private const int PerPage = 500;
+    private const int MaxPages = 50;
+    private const int PerPage = 5000;
 
-    public async Task<IReadOnlyList<InpostPointDto>> GetAllPointsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<InpostPointDto>> GetPointsAsync(PointSearchRequest request, CancellationToken cancellationToken)
     {
-        if (cache.TryGetValue<IReadOnlyList<InpostPointDto>>(CacheKey, out var cached) && cached is not null)
+        var cacheKey = BuildCacheKey(request);
+        if (cache.TryGetValue<IReadOnlyList<InpostPointDto>>(cacheKey, out var cached) && cached is not null)
         {
             return cached;
         }
 
         var allPoints = new List<InpostPointDto>();
+        string? previousPageSignature = null;
+        int? totalPagesFromApi = null;
 
         for (var page = 1; page <= MaxPages; page++)
         {
-            var pagePoints = await FetchPageAsync(page, cancellationToken);
+            var pageResult = await FetchPageAsync(page, request, cancellationToken);
+            var pagePoints = pageResult.Points;
             if (pagePoints.Count == 0)
             {
                 break;
             }
 
+            totalPagesFromApi ??= pageResult.TotalPages;
+            var currentSignature = BuildPageSignature(pagePoints);
+            if (previousPageSignature is not null && string.Equals(previousPageSignature, currentSignature, StringComparison.Ordinal))
+            {
+                logger.LogInformation(
+                    "Stopping pagination at page {Page} due to repeated page signature. API may ignore paging params.",
+                    page);
+                break;
+            }
+
+            previousPageSignature = currentSignature;
             allPoints.AddRange(pagePoints);
 
             if (pagePoints.Count < PerPage)
             {
                 break;
             }
+
+            if (totalPagesFromApi is not null && page >= totalPagesFromApi.Value)
+            {
+                break;
+            }
         }
 
-        cache.Set(CacheKey, allPoints, CacheDuration);
+        cache.Set(cacheKey, allPoints, CacheDuration);
         return allPoints;
     }
 
-    private async Task<IReadOnlyList<InpostPointDto>> FetchPageAsync(int page, CancellationToken cancellationToken)
+    private static string BuildPageSignature(IReadOnlyList<InpostPointDto> points)
     {
-        var path = $"v1/points?page={page}&per_page={PerPage}";
+        var first = points[0];
+        var last = points[^1];
+        return $"{points.Count}|{first.Name}|{first.CountryCode}|{last.Name}|{last.CountryCode}";
+    }
+
+    private async Task<PageResult> FetchPageAsync(int page, PointSearchRequest request, CancellationToken cancellationToken)
+    {
+        var path = BuildPath(page, request);
         using var response = await httpClient.GetAsync(path, cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -57,7 +83,7 @@ public sealed class InpostApiClient(
         if (pointsElement is null)
         {
             logger.LogWarning("Could not locate points array in API response for page {Page}", page);
-            return [];
+            return new PageResult([], null);
         }
 
         var parsed = new List<InpostPointDto>();
@@ -66,7 +92,36 @@ public sealed class InpostApiClient(
             parsed.Add(MapPoint(pointEl));
         }
 
-        return parsed;
+        var totalPages = GetInt(json.RootElement, "total_pages");
+        return new PageResult(parsed, totalPages);
+    }
+
+    private static string BuildCacheKey(PointSearchRequest request)
+    {
+        var country = request.CountryCode?.Trim().ToUpperInvariant() ?? string.Empty;
+        var city = request.City?.Trim().ToLowerInvariant() ?? string.Empty;
+        return $"inpost-api-points::{country}::{city}";
+    }
+
+    private static string BuildPath(int page, PointSearchRequest request)
+    {
+        var parameters = new List<string>
+        {
+            $"page={page}",
+            $"per_page={PerPage}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.CountryCode))
+        {
+            parameters.Add($"country={Uri.EscapeDataString(request.CountryCode.Trim().ToUpperInvariant())}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.City))
+        {
+            parameters.Add($"city={Uri.EscapeDataString(request.City.Trim())}");
+        }
+
+        return $"v1/points?{string.Join("&", parameters)}";
     }
 
     private static JsonElement? FindPointsArray(JsonElement root)
@@ -237,4 +292,21 @@ public sealed class InpostApiClient(
             _ => null
         };
     }
+
+    private static int? GetInt(JsonElement element, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetInt32(out var number) => number,
+            JsonValueKind.String when int.TryParse(value.GetString(), out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private sealed record PageResult(IReadOnlyList<InpostPointDto> Points, int? TotalPages);
 }
