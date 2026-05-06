@@ -28,16 +28,30 @@
         <span asp-validation-for="RequiredFunctionsCsv" class="text-danger"></span>
     </div>
 
-    <div class="col-md-3">
-        <label asp-for="ReferenceLatitude" class="form-label"></label>
-        <input asp-for="ReferenceLatitude" class="form-control" placeholder="e.g. 52.2297" />
-        <span asp-validation-for="ReferenceLatitude" class="text-danger"></span>
+    <div class="col-12">
+        <button type="button" id="use-location-btn" class="btn btn-outline-secondary btn-sm">
+            Use my current location
+        </button>
+        <span id="location-status" class="small text-muted ms-2"></span>
     </div>
 
-    <div class="col-md-3">
-        <label asp-for="ReferenceLongitude" class="form-label"></label>
-        <input asp-for="ReferenceLongitude" class="form-control" placeholder="e.g. 21.0122" />
-        <span asp-validation-for="ReferenceLongitude" class="text-danger"></span>
+    <div class="col-12">
+        <details>
+            <summary class="small text-muted">Advanced: manual coordinates</summary>
+            <div class="row g-3 mt-1">
+                <div class="col-md-3">
+                    <label asp-for="ReferenceLatitude" class="form-label"></label>
+                    <input asp-for="ReferenceLatitude" class="form-control" placeholder="e.g. 52.2297" />
+                    <span asp-validation-for="ReferenceLatitude" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label asp-for="ReferenceLongitude" class="form-label"></label>
+                    <input asp-for="ReferenceLongitude" class="form-control" placeholder="e.g. 21.0122" />
+                    <span asp-validation-for="ReferenceLongitude" class="text-danger"></span>
+                </div>
+            </div>
+        </details>
     </div>
 
     <div class="col-md-3">
@@ -79,4 +93,37 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const button = document.getElementById("use-location-btn");
+            const status = document.getElementById("location-status");
+            const latitudeInput = document.getElementById("ReferenceLatitude");
+            const longitudeInput = document.getElementById("ReferenceLongitude");
+
+            if (!button || !status || !latitudeInput || !longitudeInput) {
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                status.textContent = "Geolocation is not supported by your browser.";
+                button.disabled = true;
+                return;
+            }
+
+            button.addEventListener("click", () => {
+                status.textContent = "Getting location...";
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        latitudeInput.value = position.coords.latitude.toFixed(6);
+                        longitudeInput.value = position.coords.longitude.toFixed(6);
+                        status.textContent = "Location set.";
+                    },
+                    (error) => {
+                        status.textContent = `Location unavailable: ${error.message}`;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            });
+        })();
+    </script>
 }
