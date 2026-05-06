@@ -24,7 +24,9 @@
 
 <p class="text-muted">
     Loaded <strong>@Model.TotalFetchedPoints</strong> points from API cache/source.
-    Showing top <strong>@Model.Points.Count</strong> matches.
+    Found <strong>@Model.TotalMatchingPoints</strong> matches.
+    Showing page <strong>@Model.CurrentPage</strong> of <strong>@Model.TotalPages</strong>
+    (<strong>@Model.Points.Count</strong> results on current page).
 </p>
 
 @if (hasAnyFilter)
@@ -69,6 +71,41 @@
 <p>
     <a asp-action="Index" asp-controller="Points" class="btn btn-outline-secondary">New search</a>
 </p>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mb-3 d-flex gap-2 align-items-center">
+        <a class="btn btn-outline-primary @(Model.HasPreviousPage ? "" : "disabled")"
+           asp-action="Results"
+           asp-controller="Points"
+           asp-route-page="@(Model.CurrentPage - 1)"
+           asp-route-CountryCode="@request.CountryCode"
+           asp-route-City="@request.City"
+           asp-route-RequiredFunctionsCsv="@request.RequiredFunctionsCsv"
+           asp-route-ReferenceLatitude="@request.ReferenceLatitude"
+           asp-route-ReferenceLongitude="@request.ReferenceLongitude"
+           asp-route-PreferredType="@request.PreferredType"
+           asp-route-PreferredLocationType="@request.PreferredLocationType"
+           asp-route-Require247="@request.Require247"
+           asp-route-RequirePayment="@request.RequirePayment">Previous</a>
+
+        <span class="text-muted">Page @Model.CurrentPage / @Model.TotalPages</span>
+
+        <a class="btn btn-outline-primary @(Model.HasNextPage ? "" : "disabled")"
+           asp-action="Results"
+           asp-controller="Points"
+           asp-route-page="@(Model.CurrentPage + 1)"
+           asp-route-CountryCode="@request.CountryCode"
+           asp-route-City="@request.City"
+           asp-route-RequiredFunctionsCsv="@request.RequiredFunctionsCsv"
+           asp-route-ReferenceLatitude="@request.ReferenceLatitude"
+           asp-route-ReferenceLongitude="@request.ReferenceLongitude"
+           asp-route-PreferredType="@request.PreferredType"
+           asp-route-PreferredLocationType="@request.PreferredLocationType"
+           asp-route-Require247="@request.Require247"
+           asp-route-RequirePayment="@request.RequirePayment">Next</a>
+    </nav>
+}
 
 @if (Model.Points.Count == 0)
 {

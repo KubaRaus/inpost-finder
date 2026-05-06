@@ -4,7 +4,13 @@ namespace InpostTask.Web.Services;
 
 public sealed class PointSearchService(IInpostApiClient apiClient)
 {
-    public async Task<PointSearchResultViewModel> SearchAsync(PointSearchRequest request, CancellationToken cancellationToken)
+    public const int DefaultPageSize = 20;
+
+    public async Task<PointSearchResultViewModel> SearchAsync(
+        PointSearchRequest request,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
     {
         var normalizedCountry = request.CountryCode?.Trim().ToUpperInvariant();
         var normalizedCity = request.City?.Trim();
@@ -14,7 +20,7 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
 
         var all = await apiClient.GetPointsAsync(request, cancellationToken);
 
-        var filtered = all.Where(point =>
+        var ranked = all.Where(point =>
                 MatchesCountry(point, normalizedCountry)
                 && MatchesCity(point, normalizedCity)
                 && MatchesPayment(point, request.RequirePayment)
@@ -40,14 +46,32 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
             .ThenBy(x => x.Point.DistanceMeters ?? int.MaxValue)
             .ThenBy(x => x.Point.City)
             .ThenBy(x => x.Point.Name)
-            .Take(20)
+            .ToArray();
+
+        var effectivePageSize = pageSize <= 0 ? DefaultPageSize : pageSize;
+        var safePage = page <= 0 ? 1 : page;
+        var totalMatchingPoints = ranked.Length;
+        var totalPages = totalMatchingPoints == 0
+            ? 1
+            : (int)Math.Ceiling((double)totalMatchingPoints / effectivePageSize);
+        if (safePage > totalPages)
+        {
+            safePage = totalPages;
+        }
+
+        var paged = ranked
+            .Skip((safePage - 1) * effectivePageSize)
+            .Take(effectivePageSize)
             .ToArray();
 
         return new PointSearchResultViewModel
         {
             Request = request,
-            Points = filtered,
-            TotalFetchedPoints = all.Count
+            Points = paged,
+            TotalFetchedPoints = all.Count,
+            TotalMatchingPoints = totalMatchingPoints,
+            CurrentPage = safePage,
+            PageSize = effectivePageSize
         };
     }
 

@@ -13,11 +13,15 @@ public class PointSearchServiceTests
             MakePoint("P2", "FR", "Paris", is247: true, payment: true, ["parcel_collect"])
         ]);
 
-        var result = await service.SearchAsync(new PointSearchRequest
-        {
-            CountryCode = "PL",
-            City = "kra"
-        }, CancellationToken.None);
+        var result = await service.SearchAsync(
+            new PointSearchRequest
+            {
+                CountryCode = "PL",
+                City = "kra"
+            },
+            page: 1,
+            pageSize: 20,
+            CancellationToken.None);
 
         Assert.Single(result.Points);
         Assert.Equal("P1", result.Points[0].Point.Name);
@@ -31,13 +35,17 @@ public class PointSearchServiceTests
             MakePoint("Low", "PL", "Krakow", is247: true, payment: false, ["parcel_collect"], status: "Disabled")
         ]);
 
-        var result = await service.SearchAsync(new PointSearchRequest
-        {
-            CountryCode = "PL",
-            RequiredFunctionsCsv = "parcel_collect,parcel_send",
-            Require247 = true,
-            RequirePayment = true
-        }, CancellationToken.None);
+        var result = await service.SearchAsync(
+            new PointSearchRequest
+            {
+                CountryCode = "PL",
+                RequiredFunctionsCsv = "parcel_collect,parcel_send",
+                Require247 = true,
+                RequirePayment = true
+            },
+            page: 1,
+            pageSize: 20,
+            CancellationToken.None);
 
         Assert.Single(result.Points);
         Assert.Equal("Top", result.Points[0].Point.Name);
@@ -52,12 +60,16 @@ public class PointSearchServiceTests
             MakePoint("Far", "PL", "Warsaw", is247: true, payment: true, ["parcel_collect"], distanceMeters: 7000)
         ]);
 
-        var result = await service.SearchAsync(new PointSearchRequest
-        {
-            CountryCode = "PL",
-            ReferenceLatitude = 52.2297,
-            ReferenceLongitude = 21.0122
-        }, CancellationToken.None);
+        var result = await service.SearchAsync(
+            new PointSearchRequest
+            {
+                CountryCode = "PL",
+                ReferenceLatitude = 52.2297,
+                ReferenceLongitude = 21.0122
+            },
+            page: 1,
+            pageSize: 20,
+            CancellationToken.None);
 
         Assert.Equal("Near", result.Points[0].Point.Name);
         Assert.True(result.Points[0].Score > result.Points[1].Score);
