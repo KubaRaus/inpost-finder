@@ -28,6 +28,39 @@
         <span asp-validation-for="RequiredFunctionsCsv" class="text-danger"></span>
     </div>
 
+    <div class="col-md-3">
+        <label asp-for="ReferenceLatitude" class="form-label"></label>
+        <input asp-for="ReferenceLatitude" class="form-control" placeholder="e.g. 52.2297" />
+        <span asp-validation-for="ReferenceLatitude" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="ReferenceLongitude" class="form-label"></label>
+        <input asp-for="ReferenceLongitude" class="form-control" placeholder="e.g. 21.0122" />
+        <span asp-validation-for="ReferenceLongitude" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="PreferredType" class="form-label"></label>
+        <select asp-for="PreferredType" class="form-select">
+            <option value="">No preference</option>
+            <option value="parcel_locker">Parcel locker</option>
+            <option value="pop">POP</option>
+            <option value="pok">POK</option>
+        </select>
+        <span asp-validation-for="PreferredType" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="PreferredLocationType" class="form-label"></label>
+        <select asp-for="PreferredLocationType" class="form-select">
+            <option value="">No preference</option>
+            <option value="Outdoor">Outdoor</option>
+            <option value="Indoor">Indoor</option>
+        </select>
+        <span asp-validation-for="PreferredLocationType" class="text-danger"></span>
+    </div>
+
     <div class="col-12">
         <div class="form-check">
             <input asp-for="Require247" class="form-check-input" />

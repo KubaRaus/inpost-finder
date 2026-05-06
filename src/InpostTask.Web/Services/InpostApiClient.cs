@@ -100,7 +100,9 @@ public sealed class InpostApiClient(
     {
         var country = request.CountryCode?.Trim().ToUpperInvariant() ?? string.Empty;
         var city = request.City?.Trim().ToLowerInvariant() ?? string.Empty;
-        return $"inpost-api-points::{country}::{city}";
+        var lat = request.ReferenceLatitude?.ToString("0.0000", CultureInfo.InvariantCulture) ?? string.Empty;
+        var lng = request.ReferenceLongitude?.ToString("0.0000", CultureInfo.InvariantCulture) ?? string.Empty;
+        return $"inpost-api-points::{country}::{city}::{lat}::{lng}";
     }
 
     private static string BuildPath(int page, PointSearchRequest request)
@@ -119,6 +121,13 @@ public sealed class InpostApiClient(
         if (!string.IsNullOrWhiteSpace(request.City))
         {
             parameters.Add($"city={Uri.EscapeDataString(request.City.Trim())}");
+        }
+
+        if (request.ReferenceLatitude is not null && request.ReferenceLongitude is not null)
+        {
+            var lat = request.ReferenceLatitude.Value.ToString("0.######", CultureInfo.InvariantCulture);
+            var lng = request.ReferenceLongitude.Value.ToString("0.######", CultureInfo.InvariantCulture);
+            parameters.Add($"relative_point={Uri.EscapeDataString($"{lat},{lng}")}");
         }
 
         return $"v1/points?{string.Join("&", parameters)}";
@@ -161,6 +170,7 @@ public sealed class InpostApiClient(
     {
         var name = GetString(point, "name") ?? GetString(point, "id") ?? "unknown-point";
         var addressDetails = TryGetNested(point, "address_details");
+        var address = TryGetNested(point, "address");
         var location = TryGetNested(point, "location");
         var functions = ExtractFunctions(point);
 
@@ -180,8 +190,11 @@ public sealed class InpostApiClient(
         return new InpostPointDto
         {
             Name = name,
-            Type = GetString(point, "type"),
-            AddressLine1 = GetString(addressDetails, "line1") ?? GetString(point, "address1"),
+            Type = GetPrimaryType(point),
+            Status = GetString(point, "status"),
+            LocationType = GetString(point, "location_type"),
+            AddressLine1 = BuildAddressLine1(addressDetails, address, point),
+            AddressLine2 = BuildAddressLine2(addressDetails, address, point),
             City = GetString(addressDetails, "city") ?? GetString(point, "city"),
             PostCode = GetString(addressDetails, "post_code") ?? GetString(point, "post_code"),
             CountryCode = (GetString(addressDetails, "country")
@@ -189,10 +202,72 @@ public sealed class InpostApiClient(
                            ?? GetString(point, "country_code"))?.ToUpperInvariant(),
             Latitude = GetDouble(location, "latitude") ?? GetDouble(point, "latitude"),
             Longitude = GetDouble(location, "longitude") ?? GetDouble(point, "longitude"),
+            DistanceMeters = GetInt(point, "distance"),
             IsOpen247 = is247,
             PaymentAvailable = paymentAvailable,
             Functions = functions
         };
+    }
+
+    private static string? GetPrimaryType(JsonElement point)
+    {
+        if (!TryGetPropertyIgnoreCase(point, "type", out var typeValue))
+        {
+            return null;
+        }
+
+        if (typeValue.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in typeValue.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    var value = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+            }
+            return null;
+        }
+
+        return typeValue.ValueKind == JsonValueKind.String ? typeValue.GetString() : typeValue.ToString();
+    }
+
+    private static string? BuildAddressLine1(JsonElement addressDetails, JsonElement address, JsonElement point)
+    {
+        var line1 = GetString(address, "line1")
+                    ?? GetString(addressDetails, "line1")
+                    ?? GetString(point, "address1");
+        if (!string.IsNullOrWhiteSpace(line1))
+        {
+            return line1;
+        }
+
+        var street = GetString(addressDetails, "street");
+        var building = GetString(addressDetails, "building_number");
+        var flat = GetString(addressDetails, "flat_number");
+        var parts = new[] { street, building, flat }.Where(x => !string.IsNullOrWhiteSpace(x));
+        var composed = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(composed) ? null : composed;
+    }
+
+    private static string? BuildAddressLine2(JsonElement addressDetails, JsonElement address, JsonElement point)
+    {
+        var line2 = GetString(address, "line2")
+                    ?? GetString(addressDetails, "line2")
+                    ?? GetString(point, "address2");
+        if (!string.IsNullOrWhiteSpace(line2))
+        {
+            return line2;
+        }
+
+        var postCode = GetString(addressDetails, "post_code") ?? GetString(point, "post_code");
+        var city = GetString(addressDetails, "city") ?? GetString(point, "city");
+        var parts = new[] { postCode, city }.Where(x => !string.IsNullOrWhiteSpace(x));
+        var composed = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(composed) ? null : composed;
     }
 
     private static IReadOnlyCollection<string> ExtractFunctions(JsonElement point)

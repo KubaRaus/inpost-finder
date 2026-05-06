@@ -12,6 +12,10 @@
     var hasAnyFilter = !string.IsNullOrWhiteSpace(request.CountryCode)
                        || !string.IsNullOrWhiteSpace(request.City)
                        || !string.IsNullOrWhiteSpace(request.RequiredFunctionsCsv)
+                       || request.ReferenceLatitude is not null
+                       || request.ReferenceLongitude is not null
+                       || !string.IsNullOrWhiteSpace(request.PreferredType)
+                       || !string.IsNullOrWhiteSpace(request.PreferredLocationType)
                        || request.Require247
                        || request.RequirePayment;
 }
@@ -38,6 +42,18 @@
         @if (!string.IsNullOrWhiteSpace(request.RequiredFunctionsCsv))
         {
             <span class="badge text-bg-light border me-1">Functions: @request.RequiredFunctionsCsv</span>
+        }
+        @if (request.ReferenceLatitude is not null && request.ReferenceLongitude is not null)
+        {
+            <span class="badge text-bg-light border me-1">Reference point: @request.ReferenceLatitude, @request.ReferenceLongitude</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(request.PreferredType))
+        {
+            <span class="badge text-bg-light border me-1">Preferred type: @request.PreferredType</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(request.PreferredLocationType))
+        {
+            <span class="badge text-bg-light border me-1">Preferred location: @request.PreferredLocationType</span>
         }
         @if (request.Require247)
         {
@@ -66,10 +82,12 @@ else
                 <tr>
                     <th>Score</th>
                     <th>Name</th>
+                    <th>Status / Type</th>
                     <th>City</th>
                     <th>Address</th>
                     <th>Country</th>
                     <th>Matched features</th>
+                    <th>Distance</th>
                     <th>Coordinates</th>
                 </tr>
             </thead>
@@ -85,8 +103,25 @@ else
                         }
                     </td>
                     <td>@ranked.Point.Name</td>
+                    <td>
+                        <div>@(ranked.Point.Status ?? "-")</div>
+                        <div class="small text-muted">@((ranked.Point.Type ?? "-") + " / " + (ranked.Point.LocationType ?? "-"))</div>
+                    </td>
                     <td>@(ranked.Point.City ?? "-")</td>
-                    <td>@(ranked.Point.AddressLine1 ?? "-")</td>
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(ranked.Point.AddressLine1))
+                        {
+                            <div>@ranked.Point.AddressLine1</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(ranked.Point.AddressLine2))
+                        {
+                            <div class="small text-muted">@ranked.Point.AddressLine2</div>
+                        }
+                        @if (string.IsNullOrWhiteSpace(ranked.Point.AddressLine1) && string.IsNullOrWhiteSpace(ranked.Point.AddressLine2))
+                        {
+                            <span>-</span>
+                        }
+                    </td>
                     <td>@(ranked.Point.CountryCode ?? "-")</td>
                     <td>
                         @{
@@ -116,6 +151,17 @@ else
                             <summary class="small">All features (@ranked.Point.Functions.Count)</summary>
                             <div class="small text-muted">@string.Join(", ", ranked.Point.Functions)</div>
                         </details>
+                    </td>
+                    <td>
+                        @if (ranked.Point.DistanceMeters is not null)
+                        {
+                            var km = ranked.Point.DistanceMeters.Value / 1000.0;
+                            @($"{km:0.00} km")
+                        }
+                        else
+                        {
+                            @("-")
+                        }
                     </td>
                     <td>
                         @if (ranked.Point.Latitude is not null && ranked.Point.Longitude is not null)

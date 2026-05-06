@@ -8,6 +8,8 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
     {
         var normalizedCountry = request.CountryCode?.Trim().ToUpperInvariant();
         var normalizedCity = request.City?.Trim();
+        var preferredType = request.PreferredType?.Trim();
+        var preferredLocationType = request.PreferredLocationType?.Trim();
         var requiredFunctions = ParseFunctions(request.RequiredFunctionsCsv);
 
         var all = await apiClient.GetPointsAsync(request, cancellationToken);
@@ -20,7 +22,13 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
                 && MatchesFunctions(point, requiredFunctions))
             .Select(point =>
             {
-                var (score, breakdown) = Score(point, requiredFunctions, request.Require247, request.RequirePayment);
+                var (score, breakdown) = Score(
+                    point,
+                    requiredFunctions,
+                    request.Require247,
+                    request.RequirePayment,
+                    preferredType,
+                    preferredLocationType);
                 return new RankedPointViewModel
                 {
                     Point = point,
@@ -29,6 +37,7 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
                 };
             })
             .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Point.DistanceMeters ?? int.MaxValue)
             .ThenBy(x => x.Point.City)
             .ThenBy(x => x.Point.Name)
             .Take(20)
@@ -96,30 +105,77 @@ public sealed class PointSearchService(IInpostApiClient apiClient)
         InpostPointDto point,
         IReadOnlyCollection<string> requiredFunctions,
         bool require247,
-        bool requirePayment)
+        bool requirePayment,
+        string? preferredType,
+        string? preferredLocationType)
     {
         var score = 0;
         var breakdown = new List<string>();
+
+        if (string.Equals(point.Status, "Operating", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 60;
+            breakdown.Add("+60 status: Operating");
+        }
+        else
+        {
+            score -= 40;
+            breakdown.Add("-40 status: not Operating");
+        }
+
+        if (point.DistanceMeters is not null)
+        {
+            var distanceKm = point.DistanceMeters.Value / 1000.0;
+            var distanceScore = Math.Clamp((int)Math.Round(100 - (distanceKm * 8)), 0, 100);
+            score += distanceScore;
+            breakdown.Add($"+{distanceScore} distance: {distanceKm:0.0} km");
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredType))
+        {
+            if (point.Type?.Contains(preferredType, StringComparison.OrdinalIgnoreCase) ?? false)
+            {
+                score += 20;
+                breakdown.Add($"+20 preferred type: {preferredType}");
+            }
+            else
+            {
+                score -= 5;
+                breakdown.Add($"-5 different type than preferred: {preferredType}");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredLocationType)
+            && point.LocationType?.Contains(preferredLocationType, StringComparison.OrdinalIgnoreCase) == true)
+        {
+            score += 8;
+            breakdown.Add($"+8 location type: {preferredLocationType}");
+        }
 
         foreach (var required in requiredFunctions)
         {
             if (point.Functions.Any(x => x.Contains(required, StringComparison.OrdinalIgnoreCase)))
             {
-                score += 3;
-                breakdown.Add($"+3 function: {required}");
+                score += 5;
+                breakdown.Add($"+5 function: {required}");
             }
         }
 
         if (require247 && point.IsOpen247)
         {
+            score += 10;
+            breakdown.Add("+10 required 24/7");
+        }
+        else if (!require247 && point.IsOpen247)
+        {
             score += 2;
-            breakdown.Add("+2 open 24/7");
+            breakdown.Add("+2 bonus 24/7");
         }
 
         if (requirePayment && point.PaymentAvailable)
         {
-            score += 1;
-            breakdown.Add("+1 payment available");
+            score += 5;
+            breakdown.Add("+5 required payment available");
         }
 
         return (score, breakdown);

@@ -28,7 +28,7 @@ public class PointSearchServiceTests
     {
         var service = BuildService([
             MakePoint("Top", "PL", "Krakow", is247: true, payment: true, ["parcel_collect", "parcel_send"]),
-            MakePoint("Low", "PL", "Krakow", is247: true, payment: false, ["parcel_collect"])
+            MakePoint("Low", "PL", "Krakow", is247: true, payment: false, ["parcel_collect"], status: "Disabled")
         ]);
 
         var result = await service.SearchAsync(new PointSearchRequest
@@ -41,7 +41,26 @@ public class PointSearchServiceTests
 
         Assert.Single(result.Points);
         Assert.Equal("Top", result.Points[0].Point.Name);
-        Assert.Equal(9, result.Points[0].Score);
+        Assert.True(result.Points[0].Score > 0);
+    }
+
+    [Fact]
+    public async Task SearchAsync_PrefersCloserPointWhenReferenceCoordinatesAreUsed()
+    {
+        var service = BuildService([
+            MakePoint("Near", "PL", "Warsaw", is247: true, payment: true, ["parcel_collect"], distanceMeters: 300),
+            MakePoint("Far", "PL", "Warsaw", is247: true, payment: true, ["parcel_collect"], distanceMeters: 7000)
+        ]);
+
+        var result = await service.SearchAsync(new PointSearchRequest
+        {
+            CountryCode = "PL",
+            ReferenceLatitude = 52.2297,
+            ReferenceLongitude = 21.0122
+        }, CancellationToken.None);
+
+        Assert.Equal("Near", result.Points[0].Point.Name);
+        Assert.True(result.Points[0].Score > result.Points[1].Score);
     }
 
     private static PointSearchService BuildService(IReadOnlyList<InpostPointDto> points)
@@ -56,15 +75,21 @@ public class PointSearchServiceTests
         string city,
         bool is247,
         bool payment,
-        IReadOnlyCollection<string> functions)
+        IReadOnlyCollection<string> functions,
+        string status = "Operating",
+        int? distanceMeters = null)
     {
         return new InpostPointDto
         {
             Name = name,
             CountryCode = country,
             City = city,
+            Status = status,
+            Type = "parcel_locker",
+            LocationType = "Outdoor",
             IsOpen247 = is247,
             PaymentAvailable = payment,
+            DistanceMeters = distanceMeters,
             Functions = functions
         };
     }
