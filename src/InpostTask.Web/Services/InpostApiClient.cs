@@ -8,7 +8,7 @@ namespace InpostTask.Web.Services;
 public sealed class InpostApiClient(
     HttpClient httpClient,
     IMemoryCache cache,
-    ILogger<InpostApiClient> logger)
+    ILogger<InpostApiClient> logger) : IInpostApiClient
 {
     private const string CacheKey = "inpost-api-all-points";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);

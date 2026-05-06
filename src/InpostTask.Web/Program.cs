@@ -8,6 +8,8 @@ builder.Services.AddHttpClient<InpostTask.Web.Services.InpostApiClient>(client =
     client.BaseAddress = new Uri("https://api-global-points.easypack24.net/");
     client.Timeout = TimeSpan.FromSeconds(20);
 });
+builder.Services.AddScoped<InpostTask.Web.Services.IInpostApiClient>(sp =>
+    sp.GetRequiredService<InpostTask.Web.Services.InpostApiClient>());
 builder.Services.AddScoped<InpostTask.Web.Services.PointSearchService>();
 
 var app = builder.Build();

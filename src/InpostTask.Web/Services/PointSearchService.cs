@@ -2,7 +2,7 @@ using InpostTask.Web.Models;
 
 namespace InpostTask.Web.Services;
 
-public sealed class PointSearchService(InpostApiClient apiClient)
+public sealed class PointSearchService(IInpostApiClient apiClient)
 {
     public async Task<PointSearchResultViewModel> SearchAsync(PointSearchRequest request, CancellationToken cancellationToken)
     {
