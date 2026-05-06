@@ -3,6 +3,12 @@
 @{
     ViewData["Title"] = "Search results";
     var request = Model.Request;
+    var requestedFunctions = string.IsNullOrWhiteSpace(request.RequiredFunctionsCsv)
+        ? Array.Empty<string>()
+        : request.RequiredFunctionsCsv
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     var hasAnyFilter = !string.IsNullOrWhiteSpace(request.CountryCode)
                        || !string.IsNullOrWhiteSpace(request.City)
                        || !string.IsNullOrWhiteSpace(request.RequiredFunctionsCsv)
@@ -63,7 +69,7 @@ else
                     <th>City</th>
                     <th>Address</th>
                     <th>Country</th>
-                    <th>Features</th>
+                    <th>Matched features</th>
                     <th>Coordinates</th>
                 </tr>
             </thead>
@@ -84,25 +90,32 @@ else
                     <td>@(ranked.Point.CountryCode ?? "-")</td>
                     <td>
                         @{
-                            var previewFunctions = ranked.Point.Functions.Take(4).ToArray();
-                            var extraCount = ranked.Point.Functions.Count - previewFunctions.Length;
+                            var matchedFunctions = requestedFunctions.Length == 0
+                                ? Array.Empty<string>()
+                                : ranked.Point.Functions
+                                    .Where(function =>
+                                        requestedFunctions.Any(required =>
+                                            function.Contains(required, StringComparison.OrdinalIgnoreCase)))
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .ToArray();
                         }
-                        @if (previewFunctions.Length == 0)
+                        @if (requestedFunctions.Length == 0)
                         {
-                            <span>-</span>
+                            <span class="text-muted small">No function filter</span>
+                        }
+                        else if (matchedFunctions.Length == 0)
+                        {
+                            <span class="text-muted small">No direct function match</span>
                         }
                         else
                         {
-                            <span>@string.Join(", ", previewFunctions)</span>
-                            @if (extraCount > 0)
-                            {
-                                <span class="text-muted">... (+@extraCount more)</span>
-                                <details class="mt-1">
-                                    <summary class="small">Show all features</summary>
-                                    <div class="small text-muted">@string.Join(", ", ranked.Point.Functions)</div>
-                                </details>
-                            }
+                            <span>@string.Join(", ", matchedFunctions)</span>
                         }
+
+                        <details class="mt-1">
+                            <summary class="small">All features (@ranked.Point.Functions.Count)</summary>
+                            <div class="small text-muted">@string.Join(", ", ranked.Point.Functions)</div>
+                        </details>
                     </td>
                     <td>
                         @if (ranked.Point.Latitude is not null && ranked.Point.Longitude is not null)
